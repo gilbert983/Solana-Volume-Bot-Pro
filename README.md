@@ -1,89 +1,136 @@
-# Solana Volume Bot Pro — Real Volume, Routed Across Every Solana DEX
+# Solana DEX Reliability Index
 
-**Solana Volume Bot Pro** is a non-custodial Solana volume bot that generates genuine on-chain trading volume for any Solana token and routes it across every decentralised exchange that actually holds liquidity for that token. You can run it at **[www.solanavolumebotpro.com](https://www.solanavolumebotpro.com/)**. Unlike single-venue tools that hammer one pool on one exchange, this Solana volume bot spreads a campaign across up to 32 supported exchanges automatically, weighted by the live depth each pool really has, so the resulting volume looks the way organic trading looks: distributed, varied and spread across the whole market.
+Measured transaction failure rates for Solana DEX programs, sampled directly from
+finalized blocks. Not estimates, not aggregator numbers - the count of transactions
+that touched each program and the share of them that failed.
 
-Every trade is a real swap settled on Solana mainnet. That means the activity shows up where it counts — in the token chart, in DEX aggregator data, and in the screeners that traders and listing algorithms read — rather than as a number that only exists inside a dashboard.
+Updated weekly. Data is free to use under MIT.
 
-## What a Solana volume bot actually does
+## Latest measurement
 
-A Solana volume bot is an automation tool that coordinates many wallets to buy and sell a token across decentralised exchanges, producing real, verifiable on-chain volume. New tokens face a discovery problem: aggregators, trending boards and traders all read early activity first, and a token with thin volume and few makers is effectively invisible. A Solana volume bot solves that by generating the baseline of volume and unique makers a token needs to be seen — as long as the volume is real, routed sensibly, and spread across wallets rather than faked in a single account.
+Sampled `2026-08-15T07:32:49Z` - 7 finalized blocks, slots 439388181 to 439390981,
+a 21 minute window containing 7,913 transactions.
 
-Solana Volume Bot Pro is built around that last point. It is non-custodial, it never asks for a private key, a seed phrase or even a wallet connection, and it routes across the real market instead of one venue.
+| Venue | Transactions | Failed | Failure rate | Median fee (lamports) |
+|---|---:|---:|---:|---:|
+| Pump.fun curve | 882 | 773 | **87.6%** | 5,435 |
+| Raydium AMM v4 | 28 | 7 | 25.0% | 30,491 |
+| Jupiter v6 | 43 | 10 | 23.3% | 6,000 |
+| Raydium CLMM | 63 | 13 | 20.6% | 5,617 |
+| PumpSwap | 949 | 175 | 18.4% | 6,020 |
+| Orca Whirlpool | 22 | 4 | 18.2% | 5,364 |
+| Meteora DLMM | 200 | 34 | 17.0% | 5,239 |
+| **Network-wide** | **7,913** | **1,050** | **13.3%** | **5,000** |
 
-## What makes it different: launchpad in, whole market out
+## What stands out
 
-The core idea is a two-part model that no single-venue tool replicates.
+**The bonding curve is not like the rest of the network.** Pump.fun curve transactions
+failed at 87.6% in this sample, against a network-wide rate of 13.3%. That is a
+different regime, not a worse version of the same one. Curve pricing responds to every
+purchase, so competing transactions invalidate each other's expected output and get
+rejected on slippage. Anyone budgeting a campaign on curve-stage tokens in confirmed
+swaps rather than attempts will find the two numbers are not close.
 
-**You pick the launchpad. The router picks the exchanges.** Platform selection is a required first step, not a hidden default. You tell the bot which of 10 supported launchpads your token was created on, and from there the router automatically spreads the campaign across whichever of the 32 supported exchanges hold liquidity for that token, weighted by live pool depth. Where the launchpad can be detected from the token it is preselected for you, but any token can be routed to any selection, and nothing runs until a launchpad and at least one exchange are chosen.
+**Pooled venues cluster between 17% and 25%.** Meteora DLMM, PumpSwap and Orca
+Whirlpool land within a few points of each other. The spread across pooled venues is
+much narrower than the gap between any of them and the curve.
 
-The result is that a campaign is split across exactly the venues where your token has real liquidity, in proportion to how much liquidity sits in each. That is what distinguishes a professional Solana volume bot from a script that repeatedly buys and sells in one Raydium pool.
+**Most transactions pay no priority fee at all.** Across 7,551 sampled transactions,
+69.3% paid zero above the 5,000 lamport base fee. The median priority fee is 0, the
+75th percentile is 6 lamports, and the 90th is 1,314. The distribution is not a curve
+with a fat middle; it is a floor with a thin tail.
 
-## Supported venues: 10 launchpads + 32 exchanges
+| Priority fee percentile | Lamports |
+|---|---:|
+| p50 | 0 |
+| p75 | 6 |
+| p90 | 1,314 |
+| p99 | 10,068 |
 
-**Launchpads (you select exactly one):** Pump.fun (with PumpSwap), Bonk.fun, Raydium LaunchLab, Jupiter Studio, Believe, Bags, Boop, Heaven, Daos.fun and Vector.
+Priority fee is measured as paid fee minus the 5,000 lamport base fee, over
+single-signature transactions only.
 
-**Exchanges (routed automatically, no user choice):**
+## Method
 
-- **Aggregators:** Jupiter, Titan, DFlow
-- **AMM & CLMM:** Raydium, Orca, Meteora, Invariant, Crema, Byreal, Cropper, Aldrin, FluxBeam, Saros, GooseFX, GuacSwap, Penguin, Step, BonkSwap, Stabble
-- **Order books & market makers:** Phoenix, OpenBook, Drift, Lifinity, SolFi, Tessera V, HumidiFi, Obric, WOOFi
-- **Stableswap & LST:** Saber, Mercurial, Perena, Sanctum
+1. `getSlot` with `finalized` commitment to find the current head.
+2. `getBlock` over a slot range, with `transactionDetails: "accounts"`,
+   `rewards: false`, `maxSupportedTransactionVersion: 0`, `commitment: "finalized"`.
+   The `accounts` detail level returns the account keys each transaction touched
+   plus its error status, which is everything needed and a fraction of the payload
+   of full transaction data.
+3. A transaction is attributed to a venue when its account keys include that venue's
+   program id. A transaction routed through several programs is counted once per
+   program it touched, so venue shares do not sum to 100%.
+4. Failure is `meta.err !== null` - the transaction was included in a block and did
+   not execute. Transactions that never landed are not in the block and cannot be
+   counted here, so the real attempt-to-success ratio is worse than these figures.
+5. `getRecentPerformanceSamples` for TPS, `getPriorityFeeEstimate` for the fee market.
 
-Because routing follows real liquidity, a token that only trades on Pump.fun and Raydium is routed to Pump.fun and Raydium — not to the whole list for show. The breadth matters because it means the same tool works whether your token is a fresh bonding-curve launch or an established asset with pools scattered across a dozen venues.
+### Program ids
 
-## How a campaign works
+| Venue | Program id |
+|---|---|
+| Pump.fun curve | `6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P` |
+| PumpSwap | `pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA` |
+| Raydium AMM v4 | `675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8` |
+| Raydium CLMM | `CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK` |
+| Raydium CPMM | `CPMDWBwJDtYax9qW7AyRuVC19Cc4L4Vcy4n2BHAbHkCW` |
+| Meteora DLMM | `LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo` |
+| Meteora Pools | `Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB` |
+| Orca Whirlpool | `whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc` |
+| Jupiter v6 | `JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4` |
+| Phoenix | `PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY` |
+| Lifinity v2 | `2wT8Yq49kHgDzXuPxZSaeLaH1qbmGXtEyPy64bL7aD3c` |
 
-The whole flow runs from the console on the home page — no download, no extension, no account.
+## Limitations
 
-**Step 1 — Verify the token.** Paste a Solana token mint address. The bot reads public on-chain metadata back so you can confirm the name, symbol and logo. No key is requested at any point.
+Read these before quoting the numbers.
 
-**Step 2 — Select the launchpad.** Pick the one launchpad your token was created on. Exchange routing is not a choice you make — the router automatically uses every supported exchange the token has liquidity on, weighted by live pool depth. Nothing runs until a launchpad and at least one exchange are set.
+- **Small sample per run.** Each measurement covers a handful of blocks over roughly
+  20 minutes. It is a snapshot of conditions at that moment, not a monthly average.
+  Low-volume venues in a given sample carry tens of transactions, so their rates move
+  a lot between runs. Use the high-count rows with more confidence than the low ones.
+- **Conditions vary.** Failure rates rise during contested periods and fall when the
+  network is quiet. A single sample taken during congestion will read worse than the
+  same venue on a calm afternoon.
+- **Only landed transactions are visible.** Anything that expired before inclusion
+  never reaches a block. Every figure here understates total attempt failure.
+- **Multi-program routing double-counts.** A Jupiter route that settles on Raydium
+  appears under both.
 
-**Step 3 — Shape the campaign.** Set the wallet fleet size (500 to 10,000), the swap-size band (from 0.1 SOL), the volume shape (steady, burst or ramp), the buy-to-sell ratio, the campaign window (15 minutes to 10 hours), and which venue groups the router may use. Target volume equals wallet count multiplied by the average swap size, and the flat 2% fee recalculates live as you tune.
+## Files
 
-**Step 4 — Fund and launch.** The exact SOL fee is shown with a payment address. Once the transfer settles, routing begins and progress tracks live in the console.
+| Path | Contents |
+|---|---|
+| `data/latest.json` | Most recent measurement plus history array |
+| `data/latest.csv` | Same venue table, flat CSV |
+| `data/history/` | One JSON file per measurement date |
+| `fetch.php` | Pulls the current measurement into this repo |
 
-## Engagement layer for Pump.fun and Bonk.fun
+## Using the data
 
-Replies and favorites are launchpad-native features, so the engagement layer only applies when a campaign includes Pump.fun or Bonk.fun. When a supported mint is detected, the console unlocks two extra controls, which is what turns the tool into a full Pump.fun volume bot rather than a pure swap router.
+```bash
+curl -s https://raw.githubusercontent.com/gilbert983/solana-dex-reliability-index/main/data/latest.json
+```
 
-- **Comments as a share of swaps.** A rotating library of more than 10,000 English lines is drawn at random, so the same reply rarely appears twice in one campaign.
-- **Favorites as a share of wallets.** Wallets add the token to their favorites, feeding the same discovery signals the feed rewards.
+```python
+import json, urllib.request
+url = "https://raw.githubusercontent.com/gilbert983/solana-dex-reliability-index/main/data/latest.json"
+d = json.load(urllib.request.urlopen(url))
+for v in d["latest"]["venues"]:
+    print(f'{v["venue"]:<18} {v["failure_rate"]:>5}%  n={v["transactions"]}')
+```
 
-Both are adjustable from zero upward — comment share is measured against swap count, favorite share against wallet count. For any token that is not on Pump.fun or Bonk.fun, the engagement layer is simply disabled and only volume routing applies. Used this way as a Pump.fun volume bot, the tool grows volume, makers and social signals together, which is the combination the Pump.fun feed actually weighs.
+## Source
 
-## Execution and safety
+Measurements are produced by the on-chain sampler behind
+[solanavolumebotpro.com/solana-volume-data](https://www.solanavolumebotpro.com/solana-volume-data/),
+which runs the same method continuously and publishes the live figures. The
+methodology write-up is at
+[solanavolumebotpro.com/how-we-measure](https://www.solanavolumebotpro.com/how-we-measure/).
 
-The details that separate clean execution from an obvious bot footprint are built in rather than optional.
+If you cite these numbers, please include the measurement date - they move.
 
-- **Anti-MEV routing.** Trades are bundled through Jito and sent via a private relay, so searchers cannot sandwich predictable order flow.
-- **Curve-to-AMM handoff.** When a launch token graduates mid-campaign, routing follows the liquidity to PumpSwap, Raydium or whichever pool receives the migration, so momentum does not stall at the exact moment new buyers arrive.
-- **Randomisation.** Swap sizes are drawn from the configured band, intervals carry jitter, and wallet funding avoids a single fan-out pattern, so the on-chain footprint reads as independent activity.
-- **Failed-route recovery.** A leg that fails is re-routed rather than dropped.
-- **Residual sweep.** Leftover SOL in the fleet wallets is returned at the end of a run.
-- **Non-custodial by design.** No private key, no seed phrase and no wallet connection is ever requested; you fund a campaign and keep control of everything else.
+## Licence
 
-## Pricing
-
-One flat fee: 2% of the target volume you configure, and nothing else. There is no subscription, no per-wallet charge and no account. The minimum campaign is 50 SOL of target volume across 500 wallets, with a 0.1 SOL minimum swap size. Because target volume is simply wallet count times average swap size, the exact fee is known and shown before you fund anything.
-
-## FAQ
-
-**Is Solana Volume Bot Pro custodial?**
-No. It is fully non-custodial and never requests a private key, seed phrase or wallet connection. You fund a campaign to a shown address and keep control of your own wallet.
-
-**Is the volume real?**
-Yes. Every trade is a genuine swap settled on Solana mainnet, visible on the token chart, in aggregator data and in DEX screeners — not a synthetic counter.
-
-**Which launchpads and exchanges are supported?**
-Ten launchpads including Pump.fun, Bonk.fun, Raydium LaunchLab, Jupiter Studio, Believe, Bags, Boop, Heaven, Daos.fun and Vector, with automatic routing across 32 exchanges spanning aggregators, AMMs, CLMMs, order books, market makers and stableswaps.
-
-**Can it work as a Pump.fun volume bot?**
-Yes. For Pump.fun and Bonk.fun tokens the engagement layer adds comments and favorites on top of volume routing, so it functions as a complete Pump.fun volume bot rather than a volume-only tool.
-
-**What does it cost?**
-A flat 2% of target volume, with a 50 SOL minimum campaign. No subscription, no hidden charges.
-
----
-
-Run a campaign or read the full documentation at **[www.solanavolumebotpro.com](https://www.solanavolumebotpro.com/)**.
+MIT. Attribution appreciated, not required.

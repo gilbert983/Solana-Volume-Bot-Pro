@@ -1,0 +1,145 @@
+{
+    "latest": {
+        "measured_at": "2026-08-15T07:32:49+00:00",
+        "ok": true,
+        "fee_market": {
+            "low": 0,
+            "medium": 1500,
+            "high": 91634,
+            "very_high": 7000000,
+            "unit": "micro-lamports per compute unit"
+        },
+        "network": {
+            "tps_median": 2792,
+            "tps_p90": 2933,
+            "slot_time_ms": 414,
+            "samples_minutes": 30
+        },
+        "blocks": {
+            "sampled": 7,
+            "from_slot": 439388181,
+            "to_slot": 439390981,
+            "window_minutes": 21,
+            "transactions": 7913,
+            "failed": 1050,
+            "failure_rate": 13.3,
+            "median_fee_lamports": 5000,
+            "p90_fee_lamports": 9801
+        },
+        "priority_paid": {
+            "samples": 7551,
+            "zero_share": 69.3,
+            "p50_lamports": 0,
+            "p75_lamports": 6,
+            "p90_lamports": 1314,
+            "p99_lamports": 10068,
+            "note": "measured as paid fee minus the 5000 lamport base fee, single-signature transactions"
+        },
+        "venues": [
+            {
+                "venue": "PumpSwap",
+                "transactions": 949,
+                "failed": 175,
+                "failure_rate": 18.4,
+                "median_fee_lamports": 6020,
+                "share": 12
+            },
+            {
+                "venue": "Pump.fun curve",
+                "transactions": 882,
+                "failed": 773,
+                "failure_rate": 87.6,
+                "median_fee_lamports": 5435,
+                "share": 11.1
+            },
+            {
+                "venue": "Meteora DLMM",
+                "transactions": 200,
+                "failed": 34,
+                "failure_rate": 17,
+                "median_fee_lamports": 5239,
+                "share": 2.5
+            },
+            {
+                "venue": "Raydium CLMM",
+                "transactions": 63,
+                "failed": 13,
+                "failure_rate": 20.6,
+                "median_fee_lamports": 5617,
+                "share": 0.8
+            },
+            {
+                "venue": "Jupiter v6",
+                "transactions": 43,
+                "failed": 10,
+                "failure_rate": 23.3,
+                "median_fee_lamports": 6000,
+                "share": 0.5
+            },
+            {
+                "venue": "Raydium AMM v4",
+                "transactions": 28,
+                "failed": 7,
+                "failure_rate": 25,
+                "median_fee_lamports": 30491,
+                "share": 0.4
+            },
+            {
+                "venue": "Orca Whirlpool",
+                "transactions": 22,
+                "failed": 4,
+                "failure_rate": 18.2,
+                "median_fee_lamports": 5364,
+                "share": 0.3
+            }
+        ]
+    },
+    "history": [
+        {
+            "date": "2026-08-15",
+            "measured_at": "2026-08-15T07:32:49+00:00",
+            "failure_rate": 13.3,
+            "median_fee_lamports": 5000,
+            "tps_median": 2792,
+            "priority_p50": 0,
+            "priority_p90": 1314,
+            "venues": [
+                {
+                    "venue": "PumpSwap",
+                    "failure_rate": 18.4,
+                    "transactions": 949
+                },
+                {
+                    "venue": "Pump.fun curve",
+                    "failure_rate": 87.6,
+                    "transactions": 882
+                },
+                {
+                    "venue": "Meteora DLMM",
+                    "failure_rate": 17,
+                    "transactions": 200
+                },
+                {
+                    "venue": "Raydium CLMM",
+                    "failure_rate": 20.6,
+                    "transactions": 63
+                },
+                {
+                    "venue": "Jupiter v6",
+                    "failure_rate": 23.3,
+                    "transactions": 43
+                },
+                {
+                    "venue": "Raydium AMM v4",
+                    "failure_rate": 25,
+                    "transactions": 28
+                },
+                {
+                    "venue": "Orca Whirlpool",
+                    "failure_rate": 18.2,
+                    "transactions": 22
+                }
+            ]
+        }
+    ]
+}
